@@ -34,7 +34,7 @@
             return $this->nombre;
         }
             
-        function disponible($comprado){
+        public function disponible($comprado){
             if($comprado){
                 return false;
             }
@@ -42,7 +42,7 @@
         }
 
         // Para verificar si se entrego a tiempo o no
-        function tiempo($limite, $aumento){
+        function tiempo($limite, $compra){
             echo "-------------------------------\n" .
             "La pelicula ". $this->nombre."\n"."
             ID:  ". $this->ID ."\n". "
@@ -51,7 +51,8 @@
             sleep(1);
             if($this->fechaD > $limite){    
                 echo "● La entrega se realizo despues del límite establecido: " . $limite . "\n";
-                return $aumento * 1.5;
+                echo"Se le hara una carga de 1500 para la proxima compra\n";
+                return $compra * 1.5;
             }
             echo "● La entrega se realizó a tiempo! :) .\n";
         }
@@ -66,7 +67,7 @@
                     "--------------------------------------------------\n" .
                     "● Duracion: " . $this->duracion ." minutos\n" .
                     "--------------------------------------------------\n";
-                    "● Estado: " . ($this->disponible($comprado) ? "Disponible" : "No disponible") . "\n"; 
+                    "● Estado: " .   $this->disponible($comprado) . "\n";
         }
     }
 
@@ -104,6 +105,8 @@
         }
     }
 
+
+    // Funciones
     function Agregar(&$limite, &$catalogo){
         $n = [];
 
@@ -120,8 +123,9 @@
         $genero = trim(fgets(STDIN));
         echo"---------------------------------\n";
         echo "● Ingrese la duracion de la película: \n";
-        $duracion = (int) trim(fgets(STDIN));
+        $duracion = fgets(STDIN);
         echo"---------------------------------\n";
+
         $fechaE = date("d-m-Y");
         $limite = date("d-m-Y",  strtotime($fechaE . ' + 3 days')); 
         $fechaD = date("d-m-Y");
@@ -130,18 +134,37 @@
         array_push($catalogo, $pelicula);
     }
     
-    function Pago(&$catalogo, $compra){
+    function Pago(&$catalogo, $fechaE){
+        $total = 0;
         echo "------------------ PAGO -------------------\n";
         echo"Ingrese cuantas peliculas desea alquilar:\n";
-        $cant = (int) fgets(STDIN);
-        for($i = 0; $i < $cant; $i++){
+        $cant = fgets(STDIN);
+        for($i = 1; $i <= $cant; $i++){
             echo "Ingrese el nombre de la película que desea alquilar:\n";
-            $compra = trim(fgets(STDIN));
-            
+            $busqueda = trim(fgets(STDIN));
+            foreach($catalogo as $pelicula){   
+                if(stripos(stripslashes(strtolower($pelicula->getNombre())), stripslashes(strtolower($busqueda))) !== false){
+                    $pago = 3500;
+                    echo $pelicula->getNombre() ."\n";
+                    $pelicula->disponible(true);
+                }
+            }
+            echo"--------------------------------------------\n";
+            $total+= $pago;
         }
+        echo"Ingrese la fecha del día de hoy(dd-mm-yyyy):\n";
+        $fechaE = trim(fgets(STDIN));
+        $catalogo[$i]->tiempo($fechaE,  strtotime($fechaE . ' + 3 days'), $pago);
+        echo"--------------------------------------------\n";
+        echo"El costo total del alquiler es: $" . $total . "\n";
+        echo"Presione Enter ⏎ para continuar...\n";
+        fgets(STDIN);
+        system("cls");
+        return;
+
     }
 
-    function Peliculas(&$catalogo, $comprado){
+    function Peliculas(&$catalogo){
         if(empty($catalogo)){
             echo "No hay películas registradas.\n";
             return;
@@ -152,21 +175,14 @@
             echo"● ".$pelicula->getNombre()."\n";
         }
         echo"Ingrese el nombre de la película que desea buscar:\n";
-        $buscado = trim(fgets(STDIN));
+        $busqueda = trim(fgets(STDIN));
         
         foreach($catalogo as $pelicula){
 
-            if(stripos(stripslashes(strtolower($pelicula->getNombre())), stripslashes(strtolower($buscado))) !== false){
+            if(stripos(stripslashes(strtolower($pelicula->getNombre())), stripslashes(strtolower($busqueda))) !== false){
                 echo"● ".$pelicula->__toString()." \n";
-                echo"--------------------------------------------\n";
-                echo"\n";
-                echo"Presione una Tecla para continuar...\n";
-                fgets(STDIN);
-                system("cls");
-                return;
             }
         }
-        echo"La pelicula no fue encontrad...\n";
         echo"--------------------------------------------\n";
         echo"\n";
         echo"Presione una Tecla para continuar...\n";
@@ -188,15 +204,16 @@
         echo"5● Socios\n";
         echo" ● Salir\n";
         echo"--------------------------------------------------\n";
-        $opc = (int) trim(fgets(STDIN));
+        $opc = fgets(STDIN);
         
         sleep(1);
         system("cls");
         
+        $fechaE = date("d-m-Y");
         switch($opc){
             
             case 1:
-                Peliculas($catalogo, $comprado);
+                Peliculas($catalogo);
                 break;
             
             case 2:
@@ -204,7 +221,7 @@
                 break;
 
             case 3:
-                Pago($catalogo, $comprado);
+                Pago($catalogo, $fechaE);
                 break;
             
             case 4:
@@ -216,8 +233,7 @@
                 break;
 
             default:
-                echo"Hasta luego! 👋\n";
-                $exit = false;
+                throw new Exception("Hasta luego! 👋\n");
         }
     }while($exit);
 ?>
