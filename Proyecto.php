@@ -7,7 +7,6 @@
         - 
     */
     $comprado = false;
-    $exit = true;
     $catalogo = array();
     $ID = array();
 
@@ -15,49 +14,36 @@
 
         // Atributos basicos
         private $ID;
+        private $disponible;
         public $nombre;
         public $genero;
-        public $duracion;
-        public $fechaE;
-        public $fechaD;
+        private $duracion;
         
-        function __construct($ID, $nombre, $genero, $duracion, $fechaD, $fechaE){
+        function __construct($ID, $nombre, $genero, $duracion, $disponible){
             $this->ID = $ID;
             $this->nombre = $nombre;
             $this->genero = $genero;
             $this->duracion = $duracion;
-            $this->fechaD = $fechaD;
-            $this->fechaE = $fechaE;
+            $this->disponible = $disponible;
         }
         
         public function getNombre(){
             return $this->nombre;
         }
-            
-        public function disponible($comprado){
-            if($comprado){
+
+        function setDisponible($disponible){
+            $this->disponible = $disponible;
+        }
+
+        public function Alquilada(){
+            if(!$this->disponible){
                 return false;
             }
+            $this->setDisponible(false);
             return true;
         }
 
-        // Para verificar si se entrego a tiempo o no
-        function tiempo($limite, $compra){
-            echo "-------------------------------\n" .
-            "La pelicula ". $this->nombre."\n"."
-            ID:  ". $this->ID ."\n". "
-            ● Fue entregado el día: " . $this->fechaE . "\n";
-            
-            sleep(1);
-            if($this->fechaD > $limite){    
-                echo "● La entrega se realizo despues del límite establecido: " . $limite . "\n";
-                echo"Se le hara una carga de 1500 para la proxima compra\n";
-                return $compra * 1.5;
-            }
-            echo "● La entrega se realizó a tiempo! :) .\n";
-        }
-
-        function __toString(){
+        public function __toString(){
             return "--------------------------------------------------\n" .
                     "● ID: " . $this->ID ."\n" .
                     "--------------------------------------------------\n" .
@@ -66,45 +52,61 @@
                     "● Genero: " . $this->genero ."\n" .
                     "--------------------------------------------------\n" .
                     "● Duracion: " . $this->duracion ." minutos\n" .
-                    "--------------------------------------------------\n";
-                    "● Estado: " .   $this->disponible($comprado) . "\n";
+                    "--------------------------------------------------\n".
+                    "● Estado: " .   ($this->disponible ? "Disponible" : "No disponible") . "\n";
         }
     }
 
     class Socios{
         // Atributos basicos
-        private $codigo;
-        private $telefono;
         private $DNI;
+        private $alquiladaPor;
+        private $peliculasAlquiladas = array();
         public $nombre;
         public $apellido;
-        public $peliculasAlquiladas = array();
+        private $fechaE;
+        public $fechaD;
         
-        function __construct($codigo, $nombre, $apellido, $telefono, $peliculasAlquiladas, $DNI){
-            $this->codigo = $codigo;
+        function __construct($nombre, $apellido, $alquiladaPor, $fechaE, $DNI, $fechaD, $peliculasAlquiladas){
             $this->DNI = $DNI;
             $this->nombre = $nombre;
             $this->apellido = $apellido;
-            $this->telefono = $telefono;
+            $this->alquiladaPor = $alquiladaPor;
             $this->peliculasAlquiladas = $peliculasAlquiladas;
+            $this->fechaE = $fechaE;
+            $this->fechaD = $fechaD;
         }
 
         public function getNombre(){
             return $this->nombre;
         }
 
+        function Estado(){
+            return $this->alquiladaPor === null;
+        }
+
         public function Historial(){
             echo "-------------------------------\n" .
             "● Socio: ". $this->nombre." ".$this->apellido."\n"."
-            ● Código:  ". $this->codigo ."\n". "
+            ● DNI/Codigo:  ". $this->DNI ."\n". "
             ● Peliculas alquiladas: " . implode(", ", $this->peliculasAlquiladas) . "\n";
         }
 
-        function Cuenta($limite, $aumento, $cuenta){
+        // Para verificar si se entrego a tiempo o no
+        function tiempo($limite, $total){
+            echo "-------------------------------\n" .
+            "La pelicula ". $this->nombre."\n"."
+            ● Fue entregado el día: " . $this->fechaE . "\n";
             
+            sleep(1);
+            if($this->fechaD > $limite){    
+                echo "● La entrega se realizo despues del límite establecido: " . $limite . "\n";
+                echo"Se le hara una carga de 1500 para la proxima compra\n";
+                return $total * 1.5;
+            }
+            echo "● La entrega se realizó a tiempo! :) .\n";
         }
     }
-
 
     // Funciones
     function Agregar(&$limite, &$catalogo){
@@ -129,8 +131,9 @@
         $fechaE = date("d-m-Y");
         $limite = date("d-m-Y",  strtotime($fechaE . ' + 3 days')); 
         $fechaD = date("d-m-Y");
+        $disponibilidad = true;
         
-        $pelicula = new Casetes($ID, $nombre, $genero, $duracion, $fechaE, $fechaD);
+        $pelicula = new Casetes($ID, $nombre, $genero, $duracion, $fechaE, $fechaD, $disponibilidad);
         array_push($catalogo, $pelicula);
     }
     
@@ -142,11 +145,12 @@
         for($i = 1; $i <= $cant; $i++){
             echo "Ingrese el nombre de la película que desea alquilar:\n";
             $busqueda = trim(fgets(STDIN));
-            foreach($catalogo as $pelicula){   
+            $pago = 0;
+            foreach($catalogo as $pelicula){ 
                 if(stripos(stripslashes(strtolower($pelicula->getNombre())), stripslashes(strtolower($busqueda))) !== false){
                     $pago = 3500;
                     echo $pelicula->getNombre() ."\n";
-                    $pelicula->disponible(true);
+                    $pelicula->setDisponible(false);
                 }
             }
             echo"--------------------------------------------\n";
@@ -154,7 +158,7 @@
         }
         echo"Ingrese la fecha del día de hoy(dd-mm-yyyy):\n";
         $fechaE = trim(fgets(STDIN));
-        $catalogo[$i]->tiempo($fechaE,  strtotime($fechaE . ' + 3 days'), $pago);
+
         echo"--------------------------------------------\n";
         echo"El costo total del alquiler es: $" . $total . "\n";
         echo"Presione Enter ⏎ para continuar...\n";
@@ -235,5 +239,5 @@
             default:
                 throw new Exception("Hasta luego! 👋\n");
         }
-    }while($exit);
+    }while(true);
 ?>
